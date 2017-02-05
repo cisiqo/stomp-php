@@ -62,6 +62,11 @@ class Stomp
     */
     public $brokerVendor = 'AMQ';
 
+    /**
+    * Default stomp version
+    */
+    public $version = '1.2';
+
     protected $_brokerUri = null;
     protected $_socket = null;
     protected $_hosts = array();
@@ -203,6 +208,7 @@ class Stomp
 		if ($this->clientId != null) {
 			$headers["client-id"] = $this->clientId;
 		}
+        $headers['accept-version'] = $this->version;
 		$frame = new Frame("CONNECT", $headers);
         $this->_writeFrame($frame);
         $frame = $this->readFrame();
@@ -474,6 +480,8 @@ class Stomp
             if ($this->brokerVendor == 'RMQ') {
                 unset($headers['content-length']);
             }
+            $headers['id'] = $headers['ack'];
+            $headers['message-id'] = $headers['message-id'];
             $frame = new Frame('ACK', $headers);
             $this->_writeFrame($frame);
             return true;
@@ -484,6 +492,42 @@ class Stomp
             }
             $headers['message-id'] = $message;
             $frame = new Frame('ACK', $headers);
+            $this->_writeFrame($frame);
+            return true;
+        }
+    }
+    /**
+     * Acknowledge consumption of a message from a subscription
+     * Note: This operation is always asynchronous
+     *
+     * @param string|Frame $messageMessage ID
+     * @param string $transactionId
+     * @return boolean
+     * @throws StompException
+     */
+    public function nack ($message, $transactionId = null)
+    {
+        if ($message instanceof Frame) {
+            $headers = $message->headers;
+            if (isset($transactionId)) {
+                $headers['transaction'] = $transactionId;
+            }
+
+            if ($this->brokerVendor == 'RMQ') {
+                unset($headers['content-length']);
+            }
+            $headers['id'] = $headers['ack'];
+            $headers['message-id'] = $headers['message-id'];
+            $frame = new Frame('NACK', $headers);
+            $this->_writeFrame($frame);
+            return true;
+        } else {
+            $headers = array();
+            if (isset($transactionId)) {
+                $headers['transaction'] = $transactionId;
+            }
+            $headers['message-id'] = $message;
+            $frame = new Frame('NACK', $headers);
             $this->_writeFrame($frame);
             return true;
         }
