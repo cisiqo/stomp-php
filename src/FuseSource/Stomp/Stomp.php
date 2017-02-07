@@ -361,6 +361,7 @@ class Stomp
                 $headers[$name] = $value;
             }
         }
+        $headers['id'] = 0;
         $headers['destination'] = $destination;
         $frame = new Frame('SUBSCRIBE', $headers);
         $this->_prepareReceipt($frame, $sync);
